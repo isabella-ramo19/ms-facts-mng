@@ -2,14 +2,14 @@
 
 const uuidv4 = require("uuid/v4");
 const { of, forkJoin, from, iif, throwError } = require("rxjs");
-const { mergeMap, catchError, map, toArray, pluck } = require('rxjs/operators');
+const { mergeMap, catchError, map, toArray, pluck, tap, delay  } = require('rxjs/operators');
 
 const Event = require("@nebulae/event-store").Event;
 const { CqrsResponseHelper } = require('@nebulae/backend-node-tools').cqrs;
 const { ConsoleLogger } = require('@nebulae/backend-node-tools').log;
 const { CustomError, INTERNAL_SERVER_ERROR_CODE, PERMISSION_DENIED } = require("@nebulae/backend-node-tools").error;
 const { brokerFactory } = require("@nebulae/backend-node-tools").broker;
-
+const fetch = require("node-fetch");
 const broker = brokerFactory();
 const eventSourcing = require("../../tools/event-sourcing").eventSourcing;
 const SharkAttackDA = require("./data-access/SharkAttackDA");
@@ -45,14 +45,16 @@ class SharkAttackCRUD {
         "emigateway.graphql.mutation.FactsMngCreateSharkAttack": { fn: instance.createSharkAttack$, instance, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.mutation.FactsMngUpdateSharkAttack": { fn: instance.updateSharkAttack$, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.mutation.FactsMngDeleteSharkAttacks": { fn: instance.deleteSharkAttacks$, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
-      }
-    }
+        "emigateway.graphql.mutation.FactsMngImportSharkAttacks": { fn: instance.importSharkAttacks$, instance, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
+        "emigateway.graphql.query.FactsMngRelatedSharkAttacks": { fn: instance.getRelatedSharkAttacks$, instance, jwtValidation: { roles: READ_ROLES, attributes: REQUIRED_ATTRIBUTES } },
+       }
+     }
   };
 
 
   /**  
    * Gets the SharkAttack list
-   *
+   
    * @param {*} args args
    */
   getFactsMngSharkAttackListing$({ args }, authToken) {
@@ -82,6 +84,56 @@ class SharkAttackCRUD {
     );
 
   }
+
+  getRelatedSharkAttacks$({ args }, authToken) {
+  const { country } = args;
+
+  const fakeCases = [
+    {
+      name: "John Smith",
+      country,
+      date: "2024-01-05",
+      type: "Unprovoked",
+      species: "White Shark"
+    },
+    {
+      name: "Mary Johnson",
+      country,
+      date: "2024-02-11",
+      type: "Provoked",
+      species: "Tiger Shark"
+    },
+    {
+      name: "Carlos Ruiz",
+      country,
+      date: "2024-03-21",
+      type: "Boat",
+      species: "Bull Shark"
+    },
+    {
+      name: "Laura Adams",
+      country,
+      date: "2024-04-02",
+      type: "Unprovoked",
+      species: "Hammerhead"
+    },
+    {
+      name: "Peter Brown",
+      country,
+      date: "2024-05-15",
+      type: "Provoked",
+      species: "Blacktip Shark"
+    }
+  ];
+
+  return of(fakeCases).pipe(
+    delay(1000),
+    mergeMap(response =>
+      CqrsResponseHelper.buildSuccessResponse$(response)
+    )
+  );
+
+}
 
 
   /**
@@ -144,6 +196,95 @@ class SharkAttackCRUD {
       catchError(err => iif(() => err.name === 'MongoTimeoutError', throwError(err), CqrsResponseHelper.handleError$(err)))
     );
   }
+
+
+  importSharkAttacks$({ root, args, jwt }, authToken) {
+    console.log(authToken);
+
+    const fakeData = [];
+    for (let i = 1; i <= 100; i++) {
+      fakeData.push({
+        original_order: String(i),
+        victim: `Victim ${i}`,
+        date: "2024-01-01",
+        year: 2024,
+        country: "USA",
+        type: "Unprovoked",
+        species: "White Shark"
+      });
+    }
+    return from(fakeData).pipe(
+
+      mergeMap(record => {
+
+        const shark = {
+          name: record.victim,
+          organizationId: authToken.organizationId, 
+          date: record.date,
+          year: record.year,
+          country: record.country,
+          type: record.type,
+          species: record.species,
+          active: true
+        };
+
+        return SharkAttackDA.createSharkAttack$(
+          record.original_order,
+          shark,
+          authToken.preferred_username
+        ).pipe(
+
+          mergeMap(aggregate =>
+
+            forkJoin(
+
+              of(aggregate),
+
+              eventSourcing.emitEvent$(
+
+                new Event({
+                  eventType: "Reported",
+                  eventTypeVersion: 1,
+                  aggregateType: "SharkAttack",
+                  aggregateId: record.original_order,
+                  data: aggregate,
+                  user: authToken.preferred_username
+                }),
+
+                {
+                  autoAcknowledgeKey: process.env.MICROBACKEND_KEY
+                }
+
+              ),
+
+              broker.send$(
+                MATERIALIZED_VIEW_TOPIC,
+                "FactsMngSharkAttackModified",
+                aggregate
+              )
+
+            )
+
+          ),
+
+          map(([aggregate]) => aggregate)
+
+        );
+      }),
+
+      toArray(),
+
+      map(() => ({
+        code: 200,
+        message: "Import completed"
+      })),
+
+      mergeMap(resp => CqrsResponseHelper.buildSuccessResponse$(resp))
+    );
+
+  }
+
+
 
 
   /**

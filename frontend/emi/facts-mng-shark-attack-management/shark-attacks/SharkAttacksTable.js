@@ -133,6 +133,21 @@ function SharkAttacksTable(props) {
                                             {n.name}
                                         </TableCell>
 
+                                        <TableCell component="th" scope="row">
+                                            {n.date}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {n.country}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {n.type}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {n.species}
+                                        </TableCell>
 
                                         <TableCell component="th" scope="row" align="right">
                                             {n.active ?

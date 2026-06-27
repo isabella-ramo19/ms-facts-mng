@@ -52,6 +52,7 @@ class SharkAttackDA {
     if (filter.active !== undefined) {
       query["active"] = filter.active;
     }
+
     return query;
   }
 
@@ -60,7 +61,30 @@ class SharkAttackDA {
     const { page = 0, count = 10 } = pagination;
 
     const query = this.generateListingQuery(filter);    
-    const projection = { name: 1, active: 1 };
+    const projection = {
+      name: 1,
+      description: 1,
+      active: 1,
+      date: 1,
+      year: 1,
+      type: 1,
+      country: 1,
+      area: 1,
+      location: 1,
+      activity: 1,
+      sex: 1,
+      age: 1,
+      injury: 1,
+      fatal_y_n: 1,
+      time: 1,
+      species: 1,
+      investigator_or_source: 1,
+      pdf: 1,
+      href_formula: 1,
+      href: 1,
+      case_number: 1,
+      case_number0: 1
+    };
 
     let cursor = collection
       .find(query, { projection })
@@ -77,7 +101,9 @@ class SharkAttackDA {
 
 
     return mongoDB.extractAllFromMongoCursor$(cursor).pipe(
-      map(res => ({ ...res, id: res._id }))
+      map(res => {
+        return { ...res, id: res._id };
+      })
     );
   }
 

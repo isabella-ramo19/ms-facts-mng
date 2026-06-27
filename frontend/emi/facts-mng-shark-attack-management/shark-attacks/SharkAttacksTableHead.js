@@ -35,6 +35,34 @@ function SharkAttacksTableHead(props) {
             sort: true
         },
         {
+            id: 'date',
+            align: 'left',
+            disablePadding: false,
+            label: T.translate("shark_attacks.table_colums.date"),
+            sort: true
+        },
+        {
+            id: 'country',
+            align: 'left',
+            disablePadding: false,
+            label: T.translate("shark_attacks.table_colums.country"),
+            sort: true
+        },
+        {
+            id: 'type',
+            align: 'left',
+            disablePadding: false,
+            label: T.translate("shark_attacks.table_colums.type"),
+            sort: true
+        },
+        {
+            id: 'species',
+            align: 'left',
+            disablePadding: false,
+            label: T.translate("shark_attacks.table_colums.species"),
+            sort: true
+        },
+        {
             id: 'active',
             align: 'right',
             disablePadding: false,

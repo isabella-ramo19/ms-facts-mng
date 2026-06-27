@@ -6051,9 +6051,9 @@
     "ssl": "",
     "user": "University@nebulae.com.co"
   },
-  "loginTheme": "mytheme",
-  "accountTheme": "mytheme",
-  "adminTheme": "mytheme",
+  "loginTheme": "keycloak",
+  "accountTheme": "keycloak",
+  "adminTheme": "keycloak",
   "eventsEnabled": false,
   "eventsListeners": [
     "jboss-logging"

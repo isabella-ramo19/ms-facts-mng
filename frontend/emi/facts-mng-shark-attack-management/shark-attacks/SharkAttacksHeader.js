@@ -10,6 +10,9 @@ import i18n from "../i18n";
 import _ from '@lodash';
 import { useEventCallback } from 'rxjs-hooks'
 import { debounceTime } from "rxjs/operators";
+import { useMutation } from "@apollo/react-hooks";
+import { FactsMngImportSharkAttacks } from '../gql/SharkAttack';
+
 
 function SharkAttacksHeader(props) {
     const dispatch = useDispatch();
@@ -21,12 +24,19 @@ function SharkAttacksHeader(props) {
         (event$) => event$.pipe(debounceTime(500))
     )
 
+    const [importSharkAttacks] = useMutation(FactsMngImportSharkAttacks({}).mutation);
+
     const T = new MDText(i18n.get(user.locale));
 
     function handleSearchChange(evt) {
         keywordCallBack(evt.target.value);
         setSearchText(evt.target.value);
     }
+
+    function handleImport() {
+    importSharkAttacks().then(console.log);
+    }
+
     useEffect(() => {
         if (keyword !== undefined && keyword !== null)
             dispatch(Actions.setSharkAttacksFilterName(keyword))
@@ -82,6 +92,9 @@ function SharkAttacksHeader(props) {
                     <span className="hidden sm:flex">{T.translate("shark_attacks.add_new_shark_attack")}</span>
                     <span className="flex sm:hidden">{T.translate("shark_attacks.add_new_shark_attack_short")}</span>
                 </Button>
+            </FuseAnimate>
+            <FuseAnimate animation="transition.slideRightIn" delay={350}>
+                <Button variant="contained"color="secondary"onClick={handleImport}>{T.translate("shark_attacks.import_shark_attacks")}</Button>
             </FuseAnimate>
         </div>
     );

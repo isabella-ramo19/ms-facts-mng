@@ -27,7 +27,8 @@ import {
     onFactsMngSharkAttackModified,
     FactsMngSharkAttack,
     FactsMngCreateSharkAttack,
-    FactsMngUpdateSharkAttack
+    FactsMngUpdateSharkAttack,
+    FactsMngRelatedSharkAttacks
 } from "../gql/SharkAttack";
 import Metadata from './tabs/Metadata';
 import { BasicInfo, basicInfoFormValidationsGenerator } from './tabs/BasicInfo';
@@ -53,6 +54,8 @@ function SharkAttack(props) {
     const [sharkAttack, setSharkAttack] = useState();
     const gqlSharkAttack = FactsMngSharkAttack({ id: props.match.params.sharkAttackId });
     const [readSharkAttack, readSharkAttackResult] = useLazyQuery(gqlSharkAttack.query, { fetchPolicy: gqlSharkAttack.fetchPolicy })
+    const gqlRelatedSharkAttacks = FactsMngRelatedSharkAttacks();
+    const [getRelatedSharkAttacks, relatedSharkAttacksResult] = useLazyQuery(gqlRelatedSharkAttacks.query,{fetchPolicy: "network-only"});
     const [createSharkAttack, createSharkAttackResult] = useMutation(FactsMngCreateSharkAttack({}).mutation);
     const [updateSharkAttack, updateSharkAttackResult] = useMutation(FactsMngUpdateSharkAttack({}).mutation);
     const onSharkAttackModifiedResult = useSubscription(...onFactsMngSharkAttackModified({ id: props.match.params.sharkAttackId }));
@@ -61,6 +64,9 @@ function SharkAttack(props) {
     const [tabValue, setTabValue] = useState(0);
     const { form, handleChange: formHandleChange, setForm } = useForm(null);
     const [errors, setErrors] = useState([]);
+
+    const [relatedCases, setRelatedCases] = useState([]);
+    const [loadingCases, setLoadingCases] = useState(false);
 
     //Translation services
     let T = new MDText(i18n.get(loggedUser.locale));
@@ -147,6 +153,20 @@ function SharkAttack(props) {
         }
     }, [createSharkAttackResult.error, updateSharkAttackResult.error])
 
+
+    useEffect(() => {
+
+        if (FactsMngRelatedSharkAttacks.data) {
+
+            setRelatedCases(
+                FactsMngRelatedSharkAttacks.data.FactsMngRelatedSharkAttacks
+            );
+
+            setLoadingCases(false);
+        }
+
+    }, [FactsMngRelatedSharkAttacks.data]);
+
     /*
     *  ====== FORM HANDLERS, VALIDATORS AND LOGIC ========
     */
@@ -184,12 +204,46 @@ function SharkAttack(props) {
      * Handle the Save button action
      */
     function handleSave() {
-        const { id } = form;
-        if (id === undefined) {
-            createSharkAttack({ variables: { input: { ...form, organizationId: loggedUser.selectedOrganization.id } } });
-        } else {
-            updateSharkAttack({ variables: { id, input: { ...form, id: undefined, __typename: undefined, metadata: undefined }, merge: true } });
-        }
+    const { id } = form;
+
+    const input = {
+        ...form,
+        year: form.year === "" ? null : parseInt(form.year, 10),
+        age: form.age === "" ? null : parseInt(form.age, 10),
+        organizationId: loggedUser.selectedOrganization.id
+    };
+
+    if (id === undefined) {
+        createSharkAttack({
+            variables: { input }
+        });
+    } else {
+        updateSharkAttack({
+            variables: {
+                id,
+                input: {
+                    ...input,
+                    id: undefined,
+                    __typename: undefined,
+                    metadata: undefined
+                },
+                merge: true
+            }
+        });
+    }
+}
+
+
+    function handleMoreCases(country) {
+
+        setLoadingCases(true);
+
+        getRelatedSharkAttacks({
+            variables: {
+                country
+            }
+        });
+
     }
 
     /*
@@ -319,7 +373,18 @@ function SharkAttack(props) {
 
                                 return (
                                     <form noValidate onSubmit={handleSubmit}>
-                                        {tabValue === 0 && <BasicInfo dataSource={values} {...{ T, onChange, canWrite, errors, touched }} />}
+                                        {tabValue === 0 && <BasicInfo
+                                            dataSource={values}
+                                            T={T}
+                                            onChange={onChange}
+                                            canWrite={canWrite}
+                                            errors={errors}
+                                            touched={touched}
+                                            handleMoreCases={handleMoreCases}
+                                            relatedCases={relatedCases}
+                                            loadingCases={loadingCases}
+   
+                                        />}
                                         {tabValue === 1 && <Metadata dataSource={values} T={T} />}
                                     </form>
                                 );
