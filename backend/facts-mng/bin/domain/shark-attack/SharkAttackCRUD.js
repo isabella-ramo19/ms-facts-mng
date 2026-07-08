@@ -2,7 +2,7 @@
 
 const uuidv4 = require("uuid/v4");
 const { of, forkJoin, from, iif, throwError } = require("rxjs");
-const { mergeMap, catchError, map, toArray, pluck, tap, delay  } = require('rxjs/operators');
+const { mergeMap, catchError, map, toArray, pluck, tap, delay } = require('rxjs/operators');
 
 const Event = require("@nebulae/event-store").Event;
 const { CqrsResponseHelper } = require('@nebulae/backend-node-tools').cqrs;
@@ -47,8 +47,8 @@ class SharkAttackCRUD {
         "emigateway.graphql.mutation.FactsMngDeleteSharkAttacks": { fn: instance.deleteSharkAttacks$, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.mutation.FactsMngImportSharkAttacks": { fn: instance.importSharkAttacks$, instance, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.query.FactsMngRelatedSharkAttacks": { fn: instance.getRelatedSharkAttacks$, instance, jwtValidation: { roles: READ_ROLES, attributes: REQUIRED_ATTRIBUTES } },
-       }
-     }
+      }
+    }
   };
 
 
@@ -86,54 +86,30 @@ class SharkAttackCRUD {
   }
 
   getRelatedSharkAttacks$({ args }, authToken) {
-  const { country } = args;
+    const { country } = args;
 
-  const fakeCases = [
-    {
-      name: "John Smith",
-      country,
-      date: "2024-01-05",
-      type: "Unprovoked",
-      species: "White Shark"
-    },
-    {
-      name: "Mary Johnson",
-      country,
-      date: "2024-02-11",
-      type: "Provoked",
-      species: "Tiger Shark"
-    },
-    {
-      name: "Carlos Ruiz",
-      country,
-      date: "2024-03-21",
-      type: "Boat",
-      species: "Bull Shark"
-    },
-    {
-      name: "Laura Adams",
-      country,
-      date: "2024-04-02",
-      type: "Unprovoked",
-      species: "Hammerhead"
-    },
-    {
-      name: "Peter Brown",
-      country,
-      date: "2024-05-15",
-      type: "Provoked",
-      species: "Blacktip Shark"
-    }
-  ];
+    const baseUrl =
+      process.env.SHARK_ATTACK_DATA_URL ||
+      "http://localhost:8989/api/explore/v2.1/catalog/datasets/global-shark-attack/records";
 
-  return of(fakeCases).pipe(
-    delay(1000),
-    mergeMap(response =>
-      CqrsResponseHelper.buildSuccessResponse$(response)
-    )
-  );
+    const url = `${baseUrl}?where=${encodeURIComponent(
+      `country='${country}'`
+    )}&limit=5`;
 
-}
+    return from(fetch(url)).pipe(
+
+      mergeMap(response => response.json()),
+
+      pluck("results"),
+
+      delay(1000),
+
+      mergeMap(results =>
+        CqrsResponseHelper.buildSuccessResponse$(results)
+      )
+
+    );
+  }
 
 
   /**
@@ -199,37 +175,45 @@ class SharkAttackCRUD {
 
 
   importSharkAttacks$({ root, args, jwt }, authToken) {
-    console.log(authToken);
+    const url = process.env.SHARK_ATTACK_DATA_URL || "http://localhost:8989/api/explore/v2.1/catalog/datasets/global-shark-attack/records";
+    return from(fetch(`${url}?limit=100`)).pipe(
 
-    const fakeData = [];
-    for (let i = 1; i <= 100; i++) {
-      fakeData.push({
-        original_order: String(i),
-        victim: `Victim ${i}`,
-        date: "2024-01-01",
-        year: 2024,
-        country: "USA",
-        type: "Unprovoked",
-        species: "White Shark"
-      });
-    }
-    return from(fakeData).pipe(
+      mergeMap(response => response.json()),
+
+      pluck("results"),
+
+      mergeMap(records => from(records)),
 
       mergeMap(record => {
 
         const shark = {
-          name: record.victim,
-          organizationId: authToken.organizationId, 
+          name: record.name,
+          description: "",
+          organizationId: authToken.organizationId,
           date: record.date,
           year: record.year,
-          country: record.country,
           type: record.type,
+          country: record.country,
+          area: record.area,
+          location: record.location,
+          activity: record.activity,
+          sex: record.sex,
+          age: record.age,
+          injury: record.injury,
+          fatal_y_n: record.fatal_y_n,
+          time: record.time,
           species: record.species,
+          investigator_or_source: record.investigator_or_source,
+          pdf: record.pdf,
+          href_formula: record.href_formula,
+          href: record.href,
+          case_number: record.case_number,
+          case_number0: record.case_number0,
           active: true
         };
 
         return SharkAttackDA.createSharkAttack$(
-          record.original_order,
+          String(record.original_order),
           shark,
           authToken.preferred_username
         ).pipe(

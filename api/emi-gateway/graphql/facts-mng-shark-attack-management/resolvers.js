@@ -82,6 +82,7 @@ module.exports = {
         },
     },
 
+
     //// MUTATIONS ///////
     Mutation: {
         FactsMngCreateSharkAttack(root, args, context) {
@@ -92,6 +93,9 @@ module.exports = {
         },
         FactsMngDeleteSharkAttacks(root, args, context) {
             return sendToBackEndHandler$(root, args, context, WRITE_ROLES, 'mutation', 'SharkAttack', 'FactsMngDeleteSharkAttacks').toPromise();
+        },
+        FactsMngImportSharkAttacks(root, args, context) { 
+            return sendToBackEndHandler$(root, args, context, WRITE_ROLES, 'mutation', 'SharkAttack', 'FactsMngImportSharkAttacks').toPromise();
         },
     },
 
