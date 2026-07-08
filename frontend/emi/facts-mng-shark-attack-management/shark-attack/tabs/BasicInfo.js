@@ -58,8 +58,7 @@ export function basicInfoFormValidationsGenerator(T) {
  * @param {{dataSource,T}} props 
  */
 export function BasicInfo(props) {
-    const { dataSource: form, T, onChange, errors, touched, canWrite,handleMoreCases,relatedCases,loadingCases } = props;
-   
+    const { dataSource: form, T, onChange, errors, touched, canWrite,handleMoreCases,relatedCases,loadingCases } = props;   
     return (
 
         <div>

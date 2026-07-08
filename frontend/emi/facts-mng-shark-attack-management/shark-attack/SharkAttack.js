@@ -153,19 +153,16 @@ function SharkAttack(props) {
         }
     }, [createSharkAttackResult.error, updateSharkAttackResult.error])
 
-
     useEffect(() => {
-
-        if (FactsMngRelatedSharkAttacks.data) {
+        if (relatedSharkAttacksResult.data) {
 
             setRelatedCases(
-                FactsMngRelatedSharkAttacks.data.FactsMngRelatedSharkAttacks
+                relatedSharkAttacksResult.data.FactsMngRelatedSharkAttacks
             );
 
             setLoadingCases(false);
         }
-
-    }, [FactsMngRelatedSharkAttacks.data]);
+    }, [relatedSharkAttacksResult.data]);
 
     /*
     *  ====== FORM HANDLERS, VALIDATORS AND LOGIC ========
