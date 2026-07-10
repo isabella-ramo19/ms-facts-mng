@@ -10,7 +10,11 @@ export const MicroFrontendConfig = {
     },
     auth,
     routes: [
-        { 
+        {
+            path: '/shark-attack-mng/dashboard',
+            component: React.lazy(() => import('./dashboard/Dashboard'))
+        },
+        {
             path: '/shark-attack-mng/shark-attacks/:sharkAttackId/:sharkAttackHandle?',
             component: React.lazy(() => import('./shark-attack/SharkAttack'))
         },
@@ -24,19 +28,32 @@ export const MicroFrontendConfig = {
         }
     ],
     navigationConfig: [
+
         {
             'id': 'settings',
             'type': 'collapse',
             'icon': 'settings',
             'priority': 100,
-            children: [{
+            children: [
+                {
                 'id': 'facts-mng-shark-attack-management',
                 'type': 'item',
                 'icon': 'business',
                 'url': '/shark-attack-mng',
                 'priority': 2000,
                 auth
-            }]
+
+
+            },
+            {
+                'id': 'facts-mng-dashboard',
+                'type': 'item',
+                'icon': 'dashboard',
+                'url': '/shark-attack-mng/dashboard',
+                'priority': 1000,
+                'auth': auth
+            },
+            ]
         }
     ],
     i18nLocales: i18n.locales

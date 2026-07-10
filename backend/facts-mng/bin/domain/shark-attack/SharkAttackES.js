@@ -1,10 +1,15 @@
 'use strict'
 
-const { iif } = require("rxjs");
-const { tap } = require('rxjs/operators');
-const { ConsoleLogger } = require('@nebulae/backend-node-tools').log;
+const { iif, of, forkJoin } = require("rxjs");
+const { tap, mergeMap, map } = require('rxjs/operators');
 
+const { ConsoleLogger } = require('@nebulae/backend-node-tools').log;
+const { brokerFactory } = require("@nebulae/backend-node-tools").broker;
+
+const pubsubBroker = brokerFactory(process.env.BROKER_TYPE);
 const SharkAttackDA = require("./data-access/SharkAttackDA");
+
+
 /**
  * Singleton instance
  * @type { SharkAttackES }
@@ -26,11 +31,53 @@ class SharkAttackES {
      */
     generateEventProcessorMap() {
         return {
-            'SharkAttack': {
-                "SharkAttackModified": { fn: instance.handleSharkAttackModified$, instance, processOnlyOnSync: true },
+            "SharkAttack": {
+
+                "Reported": {
+                    fn: instance.handleSharkAttackReported$,
+                    instance
+                },
+
+                "SharkAttackModified": {
+                    fn: instance.handleSharkAttackModified$,
+                    instance,
+                    processOnlyOnSync: true
+                }
+
             }
-        }
-    };
+        };
+    }
+
+    handleSharkAttackReported$({ aid, data, user }) {
+        return SharkAttackDA.getSharkAttack$(aid).pipe(
+            tap(sharkAttack =>
+                ConsoleLogger.i(`Lookup ${aid}: ${JSON.stringify(sharkAttack)}`)
+            ),
+            mergeMap(sharkAttack => {
+                if (sharkAttack) {
+                    ConsoleLogger.i(`Ya existía ${aid}`);
+                    ConsoleLogger.i(`SharkAttack ${aid} already processed`);
+                    return of(sharkAttack);
+                }
+
+                ConsoleLogger.i(`Creating SharkAttack ${aid}`);
+
+                const mongo$ = SharkAttackDA.createSharkAttack$(aid, data, user);
+                const pubsub$ = pubsubBroker.send$(
+                    "neb-university-isabella-ramos",
+                    "SharkAttackProcessed",
+                    { id: aid, ...data }
+                );
+
+                return forkJoin({
+                    mongo: mongo$,
+                    pubsub: pubsub$
+                }).pipe(
+                    map(result => result.mongo)
+                );
+            })
+        );
+    }
 
     /**
      * Using the SharkAttackModified events restores the MaterializedView

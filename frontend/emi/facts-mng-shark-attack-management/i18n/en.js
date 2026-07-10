@@ -3,6 +3,7 @@ export default {
     'settings': 'Settings',
     'facts-mng-shark-attack-management': 'SharkAttacks',
   },
+
   shark_attacks: {
     shark_attacks: 'SharkAttacks',
     search: 'Quick search by name',
@@ -126,5 +127,20 @@ export default {
         required: "Case number is required"
       },
     }
-  }
+  },
+    dashboard: {
+    title: "Shark Attack Dashboard",
+
+    total_attacks: "Total Attacks",
+
+    top_countries: "Top Countries",
+
+    attacks_by_year: "Attacks by Year",
+
+    latest_year: "Latest Year",
+
+    attacks: "Attacks",
+    
+    no_data: "No data available"
+  },
 };

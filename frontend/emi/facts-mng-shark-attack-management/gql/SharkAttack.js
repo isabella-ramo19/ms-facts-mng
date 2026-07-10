@@ -96,3 +96,23 @@ export const FactsMngImportSharkAttacks = (variables) => ({
     `,
     variables
 });
+
+export const FactsMngSharkAttackDashboard = (variables) => ({
+    query: gql`
+        query FactsMngSharkAttackDashboard {
+            FactsMngSharkAttackDashboard {
+                total
+                attacksByCountry {
+                    country
+                    count
+                }
+                attacksByYear {
+                    year
+                    count
+                }
+            }
+        }
+    `,
+    variables,
+    fetchPolicy: 'network-only'
+});

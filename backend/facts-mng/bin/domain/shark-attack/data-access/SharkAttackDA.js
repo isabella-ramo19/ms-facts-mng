@@ -1,8 +1,8 @@
 "use strict";
 
 let mongoDB = undefined;
-const { map, mapTo } = require("rxjs/operators");
-const { of, Observable, defer } = require("rxjs");
+const { map, mapTo, tap, mergeMap  } = require("rxjs/operators");
+const { of, Observable, iif, defer, from, forkJoin} = require("rxjs");
 
 const { CustomError } = require("@nebulae/backend-node-tools").error;
 
@@ -23,23 +23,7 @@ class SharkAttackDA {
     });
   }
 
-  /**
-   * Gets an user by its username
-   */
-  static getSharkAttack$(id, organizationId) {
-    const collection = mongoDB.db.collection(CollectionName);
-
-    const query = {
-      _id: id, organizationId
-    };
-    return defer(() => collection.findOne(query)).pipe(
-      map((res) => {
-        return res !== null
-          ? { ...res, id: res._id }
-          : {}
-      })
-    );
-  }
+  
 
   static generateListingQuery(filter) {
     const query = {};
@@ -111,6 +95,25 @@ class SharkAttackDA {
     const collection = mongoDB.db.collection(CollectionName);
     const query = this.generateListingQuery(filter);    
     return defer(() => collection.countDocuments(query));
+  }
+
+
+
+  /**
+ * Obtiene un SharkAttack por id
+ */
+  static getSharkAttack$(_id) {
+    const collection = mongoDB.db.collection(CollectionName);
+
+    return defer(() =>
+      collection.findOne({ _id })
+    ).pipe(
+      map(result =>
+        result
+          ? { ...result, id: result._id }
+          : null
+      )
+    );
   }
 
   /**
@@ -219,6 +222,69 @@ class SharkAttackDA {
       map(({ deletedCount }) => deletedCount > 0)
     );
   }
+
+static getDashboardStats$() {
+  const collection = mongoDB.db.collection(CollectionName);
+
+  const total$ = from(
+    collection.countDocuments({ active: true })
+  );
+
+  const byCountry$ = from(
+    collection.aggregate([
+      {
+        $match: { active: true }
+      },
+      {
+        $group: {
+          _id: "$country",
+          total: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { total: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]).toArray()
+  );
+
+  const byYear$ = from(
+    collection.aggregate([
+      {
+        $match: { active: true }
+      },
+      {
+        $group: {
+          _id: "$year",
+          total: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]).toArray()
+  );
+
+  return forkJoin({
+    total: total$,
+    attacksByCountry: byCountry$,
+    attacksByYear: byYear$
+  }).pipe(
+    map(result => ({
+      total: result.total,
+      attacksByCountry: result.attacksByCountry.map(c => ({
+        country: c._id,
+        count: c.total
+      })),
+      attacksByYear: result.attacksByYear.map(y => ({
+        year: y._id,
+        count: y.total
+      }))
+    }))
+  );
+}
 
 }
 /**

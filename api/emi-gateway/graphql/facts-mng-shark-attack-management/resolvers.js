@@ -78,7 +78,10 @@ module.exports = {
             return sendToBackEndHandler$(root, args, context, READ_ROLES, 'query', 'SharkAttack', 'FactsMngSharkAttack').toPromise();
         },
         FactsMngRelatedSharkAttacks(root, args, context) {
-            return sendToBackEndHandler$(root,args,context,READ_ROLES,'query','SharkAttack','FactsMngRelatedSharkAttacks').toPromise();
+            return sendToBackEndHandler$(root, args, context, READ_ROLES, 'query', 'SharkAttack', 'FactsMngRelatedSharkAttacks').toPromise();
+        },
+        FactsMngSharkAttackDashboard(root, args, context) {
+            return sendToBackEndHandler$(root, args, context, READ_ROLES, 'query', 'SharkAttack', 'FactsMngSharkAttackDashboard').toPromise();
         },
     },
 

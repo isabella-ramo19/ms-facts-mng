@@ -47,6 +47,7 @@ class SharkAttackCRUD {
         "emigateway.graphql.mutation.FactsMngDeleteSharkAttacks": { fn: instance.deleteSharkAttacks$, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.mutation.FactsMngImportSharkAttacks": { fn: instance.importSharkAttacks$, instance, jwtValidation: { roles: WRITE_ROLES, attributes: REQUIRED_ATTRIBUTES } },
         "emigateway.graphql.query.FactsMngRelatedSharkAttacks": { fn: instance.getRelatedSharkAttacks$, instance, jwtValidation: { roles: READ_ROLES, attributes: REQUIRED_ATTRIBUTES } },
+        "emigateway.graphql.query.FactsMngSharkAttackDashboard": { fn: instance.getFactsMngSharkAttackDashboard$, instance, jwtValidation: { roles: READ_ROLES, attributes: REQUIRED_ATTRIBUTES } }
       }
     }
   };
@@ -70,6 +71,32 @@ class SharkAttackCRUD {
       catchError(err => iif(() => err.name === 'MongoTimeoutError', throwError(err), CqrsResponseHelper.handleError$(err)))
     );
   }
+
+  /**
+ * Gets dashboard statistics
+ */
+  getFactsMngSharkAttackDashboard$({ args }, authToken) {
+
+    return SharkAttackDA.getDashboardStats$().pipe(
+
+      mergeMap(rawResponse =>
+        CqrsResponseHelper.buildSuccessResponse$(rawResponse)
+      ),
+
+      catchError(err =>
+        iif(
+          () => err.name === "MongoTimeoutError",
+          throwError(err),
+          CqrsResponseHelper.handleError$(err)
+        )
+      )
+
+    );
+
+  }
+
+
+
 
   /**  
    * Gets the get SharkAttack by id
@@ -121,6 +148,7 @@ class SharkAttackCRUD {
       active: false,
       ...args.input,
     };
+    tap(() => ConsoleLogger.i(`Reported recibido ${aid}`))
 
     return SharkAttackDA.createSharkAttack$(aggregateId, input, authToken.preferred_username).pipe(
       mergeMap(aggregate => forkJoin(
@@ -173,9 +201,12 @@ class SharkAttackCRUD {
     );
   }
 
-
   importSharkAttacks$({ root, args, jwt }, authToken) {
-    const url = process.env.SHARK_ATTACK_DATA_URL || "http://localhost:8989/api/explore/v2.1/catalog/datasets/global-shark-attack/records";
+
+    const url =
+      process.env.SHARK_ATTACK_DATA_URL ||
+      "http://localhost:8989/api/explore/v2.1/catalog/datasets/global-shark-attack/records";
+
     return from(fetch(`${url}?limit=100`)).pipe(
 
       mergeMap(response => response.json()),
@@ -212,48 +243,23 @@ class SharkAttackCRUD {
           active: true
         };
 
-        return SharkAttackDA.createSharkAttack$(
-          String(record.original_order),
-          shark,
-          authToken.preferred_username
-        ).pipe(
+        return eventSourcing.emitEvent$(
 
-          mergeMap(aggregate =>
+          new Event({
+            eventType: "Reported",
+            eventTypeVersion: 1,
+            aggregateType: "SharkAttack",
+            aggregateId: String(record.original_order),
+            data: shark,
+            user: authToken.preferred_username
+          }),
 
-            forkJoin(
-
-              of(aggregate),
-
-              eventSourcing.emitEvent$(
-
-                new Event({
-                  eventType: "Reported",
-                  eventTypeVersion: 1,
-                  aggregateType: "SharkAttack",
-                  aggregateId: record.original_order,
-                  data: aggregate,
-                  user: authToken.preferred_username
-                }),
-
-                {
-                  autoAcknowledgeKey: process.env.MICROBACKEND_KEY
-                }
-
-              ),
-
-              broker.send$(
-                MATERIALIZED_VIEW_TOPIC,
-                "FactsMngSharkAttackModified",
-                aggregate
-              )
-
-            )
-
-          ),
-
-          map(([aggregate]) => aggregate)
+          {
+            autoAcknowledgeKey: process.env.MICROBACKEND_KEY
+          }
 
         );
+
       }),
 
       toArray(),
@@ -264,12 +270,10 @@ class SharkAttackCRUD {
       })),
 
       mergeMap(resp => CqrsResponseHelper.buildSuccessResponse$(resp))
+
     );
 
   }
-
-
-
 
   /**
    * Generate an Modified event 

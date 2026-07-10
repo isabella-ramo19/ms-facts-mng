@@ -196,6 +196,22 @@ type RelatedSharkAttack {
   species: String
 }
 
+type SharkAttacksByCountry {
+  country: String
+  count: Int
+}
+
+type SharkAttacksByYear {
+  year: Int
+  count: Int
+}
+
+type FactsMngSharkAttackDashboard {
+  total: Int
+  attacksByCountry: [SharkAttacksByCountry]
+  attacksByYear: [SharkAttacksByYear]
+}
+
 type Query {
   "Get SharkAttacks filtered"
   FactsMngSharkAttackListing(
@@ -214,6 +230,9 @@ type Query {
   FactsMngRelatedSharkAttacks(
     country: String!
   ): [RelatedSharkAttack]
+
+  "Get dashboard statistics"
+  FactsMngSharkAttackDashboard: FactsMngSharkAttackDashboard
 }
 
 type Mutation {
