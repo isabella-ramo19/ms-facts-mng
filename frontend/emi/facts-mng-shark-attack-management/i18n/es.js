@@ -2,7 +2,9 @@ export default {
   navigation: {
     'settings': 'Configuraciones',
     'facts-mng-shark-attack-management': 'SharkAttacks',
+    "facts-mng-dashboard": "Dashboard"
   },
+
   shark_attacks: {
     shark_attacks: 'SharkAttacks',
     search: 'Búsqueda rápida por nombre',
@@ -136,5 +138,20 @@ export default {
       },
 
     }
-  }
+  },
+    dashboard: {
+    title: "Dashboard de Ataques de Tiburón",
+
+    total_attacks: "Total de Ataques",
+
+    top_countries: "Países con Más Ataques",
+
+    attacks_by_year: "Ataques por Año",
+
+    latest_year: "Último Año",
+
+    attacks: "Ataques",
+
+    no_data: "Sin información"
+  },
 };
